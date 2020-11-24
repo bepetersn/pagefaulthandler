@@ -28,7 +28,7 @@ int find_LRU_victim(Pentry p, int page, int timestamps[MAXPROCPAGES], int othert
     int lru_page = page;
     int pagetmp = 0;
     for (pagetmp = 0; pagetmp < p.npages; pagetmp++)
-    {
+    {// comment
         if (timestamps[pagetmp] &&
             (timestamps[pagetmp] <
              timestamps[lru_page]) &&
