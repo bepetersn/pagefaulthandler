@@ -30,20 +30,24 @@ int classify(int cycle)
     //     return 3;
     switch (cycle)
     {
-    case 1533:
+    case 1533: // We get these off-by-1 jumps when we detect cycles at every step
+    case 1534:
         return 0;
-    case 1129:
+    case 1129: // Same
+    case 1130:
         return 1;
     case 516:
+    case 1683:
         return 2;
-    case 503:
+    case 503: // Same
+    case 504:
     case 501:
         return 4;
     case 1911:
         // You wouldn't think going to the end of its program
         // would count as a cycle, but from our perspective
         // the next program starts right afterward, at 0
-        return 3;
+        return -1;
     default:
         printf("cycle of %d detected", cycle);
         exit(EXIT_FAILURE);
@@ -57,7 +61,6 @@ int detect_cycle(int last_pc, int pc)
        of a for-loop, or going to a label */
 
     // After some instructions have executed,
-
     if (last_pc != -1)
     {
         if (pc == last_pc)
@@ -86,15 +89,38 @@ int predict_next_page(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc
     UNUSED(proc_type);
     if (proc_type != -1)
     {
-        ; // do something with proc type knowledge
-    }
-    else
-    { // best global strategy we have
-
-        if (page < AVG_PROCESS_MAX_PAGE)
-        {
-            return page + 1;
+        switch(proc_type) {
+            case 0:
+                if(page == 3) {  // P0 makes this jump, probability: 0.6
+                    return 10;
+                }
+                if(page == 12) { // P0 makes this jump, sometimes; should be rarer than it is?
+                    return 0;
+                }
+                break;
+            case 1:
+                if (page < 9) { // max page requested by P1
+                    return page + 1;
+                } else {
+                    return 0;
+                }
+            case 2: 
+                if (page == 12) { // P2 makes this jump, typically
+                    return 9;
+                }
+                break;
+            case 4:
+                if (page < 4) { // max page requested by P4
+                    return page + 1;
+                } else {
+                    return 0;
+                }
         }
+    } 
+    // best global strategy we have
+    if (page < AVG_PROCESS_MAX_PAGE)
+    {
+        return page + 1;
     }
     return 0;
 }
@@ -131,7 +157,7 @@ int num_pages_swapping_in_right_now(Pentry p, int proc)
     return num_pages;
 }
 
-int find_LRU_victim(Pentry p, int page, int timestamps[MAXPROCPAGES])
+int find_LRU_victim(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc_type)
 {
     // Try to find the LRU page; this should
     // be the page with the lowest value in its
@@ -139,6 +165,7 @@ int find_LRU_victim(Pentry p, int page, int timestamps[MAXPROCPAGES])
     // and which is still in memory
     int lru_page = page;
     int pagetmp = 0;
+    UNUSED(proc_type);
     for (pagetmp = 0; pagetmp < p.npages; pagetmp++)
     {
         // Find the victim: mininum non-zero
@@ -155,7 +182,7 @@ int find_LRU_victim(Pentry p, int page, int timestamps[MAXPROCPAGES])
     return lru_page;
 }
 
-void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES])
+void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], int proc_type)
 {
     /* Is page out of memory? Try to page something in; 
        If this fails, page something out */
@@ -175,7 +202,7 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES])
 
                 if (pageout(proc, // NOTE: May fail if this page is already
                             // in the process of being swapped in
-                            find_LRU_victim(p, page, timestamps)))
+                            find_LRU_victim(p, page, timestamps, proc_type)))
                 {
 
                     // printf("o ");
@@ -194,7 +221,7 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES])
         {
             if (pageout(proc, // NOTE: May fail if this page is already
                         // in the process of being swapped in
-                        find_LRU_victim(p, page, timestamps)))
+                        find_LRU_victim(p, page, timestamps, proc_type)))
             {
 
                 // printf("o ");
@@ -229,6 +256,7 @@ void pageit(Pentry q[MAXPROCESSES])
     int pc;
     int cycle;
     int next_page;
+    int proc_type;
     Pentry p;
 
     /* initialize static vars on first run */
@@ -266,24 +294,31 @@ void pageit(Pentry q[MAXPROCESSES])
             pcs[proc][CURRENT] = pc;
 
             // Detect innermost cycle and classify
-            if (proc_types[proc] == -1)
+            // if (proc_types[proc] == -1) // When we do this only once, we mess up on second round
+            // {
+            cycle = detect_cycle(pcs[proc][LAST], pc);
+            if (cycle)
             {
-                cycle = detect_cycle(pcs[proc][LAST], pc);
-                if (cycle)
-                {
-                    proc_types[proc] = classify(cycle);
-                    printf("%d, %d\n", proc, proc_types[proc]);
-                    fflush(stdout);
+                proc_types[proc] = classify(cycle);
+                // printf("%d, %d\n", proc, proc_types[proc]);
+                // fflush(stdout);
+            }
+            proc_type = proc_types[proc];
+            // }
+
+            if(proc == 5) {
+                if(proc < -2) {
+                    return;
                 }
             }
-
-            handle_swap_in(p, proc, page, timestamps[proc]);
+            handle_swap_in(p, proc, page, timestamps[proc], proc_type);
             // TODO: check for previous prediction miss
-            next_page = predict_next_page(p, page, timestamps[proc], proc_types[proc]);
-            handle_swap_in(p, proc, next_page, timestamps[proc]);
+            next_page = predict_next_page(p, page, timestamps[proc], proc_type);
+            handle_swap_in(p, proc, next_page, timestamps[proc], proc_type);
         }
     }
     /* Advance time for next pageit iteration */
     tick++;
+    // getchar();
     /* Record the last pc */
 }
