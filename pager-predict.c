@@ -25,41 +25,43 @@
 #define AVG_PROCESS_MAX_PAGE 11
 #define MAX_PAGE_USED 15
 
-int classify(int cycle)
+int classify(int jump)
 {
-    // if (pcs[CURRENT] > 1682) // doesn't work for some reasons
-    //     return 3;
-    switch (cycle)
+    switch (jump)
     {
-    case 1533: // We get these off-by-1 jumps when we detect cycles at every step
-    case 1534:
+    case -1533: // We get these similar-but-off-by-1 jumps when we detect at every step
+    case -1534:
+    case 902:
+    case 132:
         return 0;
-    case 1129: // Same
-    case 1130:
+    case -1129: // Same
+    case -1130:
         return 1;
-    case 516:
-    case 1683:
+    case -516:
+    case -1683:
         return 2;
-    case 503: // Same
-    case 504:
-    case 501:
+    case -503: // Same
+    case -504:
+    case -501:
+    case 3:
         return 4;
-    case 1911:
+    case -1911:
         // You wouldn't think going to the end of its program
-        // would count as a cycle, but from our perspective
+        // would count as a jump, but from our perspective
         // the next program starts right afterward, at 0
         return -1;
     default:
-        printf("cycle of %d detected", cycle);
+        printf("jump of %d detected", jump);
         exit(EXIT_FAILURE);
     }
 }
 
-int detect_cycle(int last_pc, int pc)
+int detect_jump(int last_pc, int pc)
 {
-    /* Detect the innermost cycle made by the pc for this 
+    /* Detect a jump made by the pc for this 
        process; this could be from going back to the beginning 
-       of a for-loop, or going to a label */
+       of a for-loop, or going to a label, or skipping one branch
+       of an if-statement */
 
     // After some instructions have executed,
     if (last_pc != -1)
@@ -70,13 +72,13 @@ int detect_cycle(int last_pc, int pc)
         }
         else
         {
-            if (pc > last_pc)
+            if ((pc - last_pc) == 1)
             {
                 return 0; // instruction execution
             }
             else
-            { // (pc < last_pc) -- cycle occurred
-                return last_pc - pc;
+            { // (pc - last_pc != 1) -- jump occurred
+                return pc - last_pc;
             }
         }
     }
@@ -264,7 +266,7 @@ void pageit(Pentry q[MAXPROCESSES])
     int proc;
     int page;
     int pc;
-    int cycle;
+    int jump;
     int next_page;
     int proc_type;
     Pentry p;
@@ -303,13 +305,13 @@ void pageit(Pentry q[MAXPROCESSES])
             pcs[proc][LAST] = pcs[proc][CURRENT];
             pcs[proc][CURRENT] = pc;
 
-            // Detect innermost cycle and classify
+            // Detect any jumps and classify
             // if (proc_types[proc] == -1) // When we do this only once, we mess up on second round
             // {
-            cycle = detect_cycle(pcs[proc][LAST], pc);
-            if (cycle)
+            jump = detect_jump(pcs[proc][LAST], pc);
+            if (jump)
             {
-                proc_types[proc] = classify(cycle);
+                proc_types[proc] = classify(jump);
                 // printf("%d, %d\n", proc, proc_types[proc]);
                 // fflush(stdout);
             }

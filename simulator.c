@@ -340,6 +340,7 @@ static long process_step(int pnum, Process *q) {
 	    if (output) fprintf(output, "%ld,%d,%ld,%ld,%ld,blocked\n", 
 		sysclock, pnum, q->pid, q->kind, q->pc); 
 	    q->blocked[page]=TRUE; 
+        printf("blocked");
 	}
 	q->block++; return TRUE; 
    } else { 
