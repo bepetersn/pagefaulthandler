@@ -144,6 +144,17 @@ int predict_next_page(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc
     return 0;
 }
 
+int get_first_page_paged_in_right_now(Pentry p)
+{
+    int first_page = -1;
+    for (int i = 0; i < p.npages; i++)
+    {
+        if (p.pages[i])
+            first_page = i;
+    }
+    return first_page;
+}
+
 int num_pages_swapped_in_right_now(Pentry p)
 {
     int num_pages = 0;
@@ -182,20 +193,26 @@ int find_LRU_victim(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc_t
     // be the page with the lowest value in its
     // timestamp that is neither 0 nor the one we want,
     // and which is still in memory
-    int lru_page = page;
-    int pagetmp = 0;
+
+    // NOTE: lru_page may be -1; this will be sent to pageout
+    // which can fail in that case
+
     UNUSED(proc_type);
-    for (pagetmp = 0; pagetmp < p.npages; pagetmp++)
+    int lru_page = -1;
+    int lru_timestamp = __INT_MAX__;
+    int pagetmp = 0;
+    for (pagetmp = 0; pagetmp < MAX_PAGE_USED; pagetmp++)
     {
         // Find the victim: mininum non-zero
         // timestamp that is in mem
-        if (timestamps[pagetmp] &&
+        if ( timestamps[pagetmp] &&
             (timestamps[pagetmp] <
-             timestamps[lru_page]) &&
+                     lru_timestamp) &&
             pagetmp != page &&
             p.pages[pagetmp])
         {
             lru_page = pagetmp;
+            lru_timestamp = timestamps[pagetmp];
         }
     }
     return lru_page;
