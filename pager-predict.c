@@ -117,16 +117,9 @@ int predict_next_page(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc
             { // P2 makes this jump, typically
                 return 9;
             }
-            else {
-                if(page < 12) {
-                    return page + 1;
-                } else {
-                    return 0;
-                }
-            }
             break;
         case 4:
-            if (page < 3)
+            if (page < 4)
             { // max page requested by P4
                 return page + 1;
             }
@@ -137,7 +130,7 @@ int predict_next_page(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc
         }
     }
     // best global strategy we have
-    if (page < MAX_PAGE_USED)
+    if (page < AVG_PROCESS_MAX_PAGE)
     {
         return page + 1;
     }
@@ -342,7 +335,7 @@ void pageit(Pentry q[MAXPROCESSES])
             proc_type = proc_types[proc];
             // }
 
-            if (proc == 4)
+            if (proc == 5)
             {
                 if (proc < -2)
                 {
