@@ -11,7 +11,7 @@ fi
 all_perf=()
 for i in $(seq 1 $iterations); 
 do 
-    perf=$(./test-$1 2>&1 | tee /dev/tty | grep ratio | cut -c 33-40)
+    perf=$(./test-$1 2>&1 | grep ratio | cut -c 33-40)
     echo "$i: $perf"
     all_perf+=($perf)
 done

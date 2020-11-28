@@ -23,6 +23,7 @@
 #define CURRENT 0
 #define PAGE_LIMIT_PER_PROCESS 5
 #define AVG_PROCESS_MAX_PAGE 11
+#define MAX_PAGE_USED 15
 
 int classify(int cycle)
 {
@@ -86,37 +87,46 @@ int predict_next_page(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc
 {
     UNUSED(p);
     UNUSED(timestamps);
-    UNUSED(proc_type);
     if (proc_type != -1)
     {
-        switch(proc_type) {
-            case 0:
-                if(page == 3) {  // P0 makes this jump, probability: 0.6
-                    return 10;
-                }
-                if(page == 12) { // P0 makes this jump, sometimes; should be rarer than it is?
-                    return 0;
-                }
-                break;
-            case 1:
-                if (page < 9) { // max page requested by P1
-                    return page + 1;
-                } else {
-                    return 0;
-                }
-            case 2: 
-                if (page == 12) { // P2 makes this jump, typically
-                    return 9;
-                }
-                break;
-            case 4:
-                if (page < 4) { // max page requested by P4
-                    return page + 1;
-                } else {
-                    return 0;
-                }
+        switch (proc_type)
+        {
+        case 0:
+            if (page == 3)
+            { // P0 makes this jump, probability: 0.6
+                return 10;
+            }
+            if (page == 12)
+            { // P0 makes this jump, sometimes; should be rarer than it is?
+                return 0;
+            }
+            break;
+        case 1:
+            if (page < 9)
+            { // max page requested by P1
+                return page + 1;
+            }
+            else
+            {
+                return 0;
+            }
+        case 2:
+            if (page == 12)
+            { // P2 makes this jump, typically
+                return 9;
+            }
+            break;
+        case 4:
+            if (page < 4)
+            { // max page requested by P4
+                return page + 1;
+            }
+            else
+            {
+                return 0;
+            }
         }
-    } 
+    }
     // best global strategy we have
     if (page < AVG_PROCESS_MAX_PAGE)
     {
@@ -306,8 +316,10 @@ void pageit(Pentry q[MAXPROCESSES])
             proc_type = proc_types[proc];
             // }
 
-            if(proc == 5) {
-                if(proc < -2) {
+            if (proc == 5)
+            {
+                if (proc < -2)
+                {
                     return;
                 }
             }
