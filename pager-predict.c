@@ -19,21 +19,84 @@
 
 #define UNUSED(x) (void)(x)
 
+#define LAST 1
+#define CURRENT 0
 #define PAGE_LIMIT_PER_PROCESS 5
 #define AVG_PROCESS_MAX_PAGE 11
 
-int predict_next_page(Pentry p, int page, int timestamps[MAXPROCPAGES])
+int classify(int cycle)
+{
+    // if (pcs[CURRENT] > 1682) // doesn't work for some reasons
+    //     return 3;
+    switch (cycle)
+    {
+    case 1533:
+        return 0;
+    case 1129:
+        return 1;
+    case 516:
+        return 2;
+    case 503:
+    case 501:
+        return 4;
+    case 1911:
+        // You wouldn't think going to the end of its program
+        // would count as a cycle, but from our perspective
+        // the next program starts right afterward, at 0
+        return 3;
+    default:
+        printf("cycle of %d detected", cycle);
+        exit(EXIT_FAILURE);
+    }
+}
+
+int detect_cycle(int last_pc, int pc)
+{
+    /* Detect the innermost cycle made by the pc for this 
+       process; this could be from going back to the beginning 
+       of a for-loop, or going to a label */
+
+    // After some instructions have executed,
+
+    if (last_pc != -1)
+    {
+        if (pc == last_pc)
+        {
+            return 0; // noop
+        }
+        else
+        {
+            if (pc > last_pc)
+            {
+                return 0; // instruction execution
+            }
+            else
+            { // (pc < last_pc) -- cycle occurred
+                return last_pc - pc;
+            }
+        }
+    }
+    return 0;
+}
+
+int predict_next_page(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc_type)
 {
     UNUSED(p);
     UNUSED(timestamps);
-    if (page < AVG_PROCESS_MAX_PAGE)
+    UNUSED(proc_type);
+    if (proc_type != -1)
     {
-        return page + 1;
+        ; // do something with proc type knowledge
     }
     else
-    {
-        return 0;
+    { // best global strategy we have
+
+        if (page < AVG_PROCESS_MAX_PAGE)
+        {
+            return page + 1;
+        }
     }
+    return 0;
 }
 
 int num_pages_swapped_in_right_now(Pentry p)
@@ -50,13 +113,14 @@ int num_pages_swapped_in_right_now(Pentry p)
     return num_pages;
 }
 
-int num_pages_swapping_in_right_now(Pentry p, int proc) {
-        int num_pages = 0;
+int num_pages_swapping_in_right_now(Pentry p, int proc)
+{
+    int num_pages = 0;
     for (int i = 0; i < p.npages; i++)
     {
-        // If a page is not current paged in, we can call pageout 
+        // If a page is not current paged in, we can call pageout
         // idempotently to no effect, EXCEPT this will return 0 when
-        // the page is currently swapping in -- therefore, we can 
+        // the page is currently swapping in -- therefore, we can
         // tally how many are swapping in right now
         if (!p.pages[i] && !pageout(proc, i))
         {
@@ -102,33 +166,41 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES])
         // Keep track of total pages used so we don't swap in too many
         int pages_pagedin_now = num_pages_swapped_in_right_now(p);
         int pages_pagingin_now = num_pages_swapping_in_right_now(p, proc);
-        int pages_used_now = pages_pagedin_now + pages_pagingin_now;        
+        int pages_used_now = pages_pagedin_now + pages_pagingin_now;
         if (pages_used_now < PAGE_LIMIT_PER_PROCESS)
         {
             if (!pagein(proc, page)) // NOTE: May fail if there are no physical frames available
                                      //       OR if this page is in the process of being swapped out
             {
 
-                if(pageout(proc, // NOTE: May fail if this page is already
-                        // in the process of being swapped in
-                        find_LRU_victim(p, page, timestamps))) {
+                if (pageout(proc, // NOTE: May fail if this page is already
+                            // in the process of being swapped in
+                            find_LRU_victim(p, page, timestamps)))
+                {
 
                     // printf("o ");
-                } else {
+                }
+                else
+                {
                     // printf("*i ");
                 }
-            } else {
+            }
+            else
+            {
                 // printf("i ");
             }
         }
         else if (pages_used_now == PAGE_LIMIT_PER_PROCESS)
         {
-            if(pageout(proc, // NOTE: May fail if this page is already
+            if (pageout(proc, // NOTE: May fail if this page is already
                         // in the process of being swapped in
-                        find_LRU_victim(p, page, timestamps))) {
+                        find_LRU_victim(p, page, timestamps)))
+            {
 
-                    // printf("o ");
-            } else {
+                // printf("o ");
+            }
+            else
+            {
                 // printf("*i ");
             }
         }
@@ -146,6 +218,8 @@ void pageit(Pentry q[MAXPROCESSES])
     static int initialized = 0;
     static int tick = 1;
     static int timestamps[MAXPROCESSES][MAXPROCPAGES];
+    static int pcs[MAXPROCESSES][2];
+    static int proc_types[MAXPROCESSES];
 
     /* Local vars */
     int proctmp;
@@ -153,6 +227,8 @@ void pageit(Pentry q[MAXPROCESSES])
     int proc;
     int page;
     int pc;
+    int cycle;
+    int next_page;
     Pentry p;
 
     /* initialize static vars on first run */
@@ -164,6 +240,8 @@ void pageit(Pentry q[MAXPROCESSES])
             {
                 timestamps[proctmp][pagetmp] = 0;
             }
+            pcs[proctmp][CURRENT] = -1;
+            proc_types[proctmp] = -1;
         }
         initialized = 1;
     }
@@ -183,13 +261,29 @@ void pageit(Pentry q[MAXPROCESSES])
 
             // Note this proc's page as having been used this tick
             timestamps[proc][page] = tick;
-            
+            // Record the last and current PCs
+            pcs[proc][LAST] = pcs[proc][CURRENT];
+            pcs[proc][CURRENT] = pc;
+
+            // Detect innermost cycle and classify
+            if (proc_types[proc] == -1)
+            {
+                cycle = detect_cycle(pcs[proc][LAST], pc);
+                if (cycle)
+                {
+                    proc_types[proc] = classify(cycle);
+                    printf("%d, %d\n", proc, proc_types[proc]);
+                    fflush(stdout);
+                }
+            }
+
             handle_swap_in(p, proc, page, timestamps[proc]);
             // TODO: check for previous prediction miss
-            handle_swap_in(p, proc, predict_next_page(p, page, timestamps[proc]),
-                           timestamps[proc]);
+            next_page = predict_next_page(p, page, timestamps[proc], proc_types[proc]);
+            handle_swap_in(p, proc, next_page, timestamps[proc]);
         }
     }
-    /* advance time for next pageit iteration */
+    /* Advance time for next pageit iteration */
     tick++;
+    /* Record the last pc */
 }
