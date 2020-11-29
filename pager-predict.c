@@ -25,6 +25,8 @@
 #define AVG_PROCESS_MAX_PAGE 11
 #define MAX_PAGE_USED 15
 
+#define proc_log(proc, msg) { if(proc == 5) { printf("process =5: %s", msg); fflush(stdout);}}
+
 int classify(int jump)
 {
     switch (jump)
@@ -213,6 +215,9 @@ int find_LRU_victim(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc_t
 
 void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], int proc_type)
 {
+    // if(proc == 5) 
+    //     printf("get page%d", page);
+
     /* Is page out of memory? Try to page something in; 
        If this fails, page something out */
     int pagein_required = !p.pages[page];
@@ -223,6 +228,11 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
         int pages_pagedin_now = num_pages_swapped_in_right_now(p);
         int pages_pagingin_now = num_pages_swapping_in_right_now(p, proc);
         int pages_used_now = pages_pagedin_now + pages_pagingin_now;
+        if(proc == 5) {
+            printf("process= 5; pages_pagingin_now: %d\n", pages_pagingin_now);
+            printf("process= 5; pages_paged_now: %d\n", pages_pagedin_now);
+            fflush(stdout);
+        }
         if (pages_used_now < PAGE_LIMIT_PER_PROCESS)
         {
             if (!pagein(proc, page)) // NOTE: May fail if there are no physical frames available
@@ -234,30 +244,33 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
                             find_LRU_victim(p, page, timestamps, proc_type)))
                 {
 
-                    // printf("o ");
+                    // proc_log(proc, "o ");
                 }
                 else
                 {
-                    // printf("*i ");
+                    // proc_log(proc, "*i ");
                 }
             }
             else
             {
-                // printf("i ");
+                // proc_log(proc, "i ");
             }
         }
         else if (pages_used_now == PAGE_LIMIT_PER_PROCESS)
         {
+            if(proc == 5)
+                printf("process= 5: pagelimit\n");
+
             if (pageout(proc, // NOTE: May fail if this page is already
                         // in the process of being swapped in
                         find_LRU_victim(p, page, timestamps, proc_type)))
             {
 
-                // printf("o ");
+                // proc_log(proc, "o ");
             }
             else
             {
-                // printf("*i ");
+                // proc_log(proc, "*i ");
             }
         }
         else
@@ -272,7 +285,7 @@ void pageit(Pentry q[MAXPROCESSES])
 {
     /* Static vars */
     static int initialized = 0;
-    static int tick = 1;
+    static int tick = 0;
     static int timestamps[MAXPROCESSES][MAXPROCPAGES];
     static int pcs[MAXPROCESSES][2];
     static int proc_types[MAXPROCESSES];
@@ -336,15 +349,17 @@ void pageit(Pentry q[MAXPROCESSES])
             // }
 
             if (proc == 5)
-            {
-                if (proc < -2)
-                {
-                    return;
-                }
-            }
+                printf("process= 5; tick: %d; %d,", tick, page);
+
             handle_swap_in(p, proc, page, timestamps[proc], proc_type);
             // TODO: check for previous prediction miss
             next_page = predict_next_page(p, page, timestamps[proc], proc_type);
+            
+            if (proc == 5) {
+                printf("%d\n", next_page);
+                fflush(stdout);
+            }
+
             handle_swap_in(p, proc, next_page, timestamps[proc], proc_type);
         }
     }
