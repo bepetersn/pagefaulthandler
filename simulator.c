@@ -337,16 +337,18 @@ static long process_step(int pnum, Process *q) {
    if (q->pages[page]!=0) { 
 	if (!q->blocked[page]) { 
 	    sim_log(LOG_BLOCK,"process=%2d page=%3d blocked\n",pnum,page);
-	    if (output) fprintf(output, "%ld,%d,%ld,%ld,%ld,blocked\n", 
+        fflush(stdout);
+        if (output) fprintf(output, "%ld,%d,%ld,%ld,%ld,blocked\n", 
 		sysclock, pnum, q->pid, q->kind, q->pc); 
 	    q->blocked[page]=TRUE; 
-        printf("blocked");
+        // printf("blocked");
 	}
 	q->block++; return TRUE; 
    } else { 
 	if (q->blocked[page]) { 
 	    sim_log(LOG_BLOCK,"process=%2d page=%3d unblocked\n",pnum,page);
-	    if (output) fprintf(output, "%ld,%d,%ld,%ld,%ld,unblocked\n",
+        fflush(stdout);
+        if (output) fprintf(output, "%ld,%d,%ld,%ld,%ld,unblocked\n",
 		sysclock,pnum, q->pid, q->kind, q->pc);
 	    q->blocked[page]=FALSE; 
         } 
@@ -410,6 +412,7 @@ int pageout(int process, int page) {
     if (processes[process]->pages[page]>0) 
 	return FALSE; /* not available to swap out */ 
 sim_log(LOG_PAGE,"process=%2d page=%3d start pageout\n",process,page);
+    fflush(stdout);
     if (pages) fprintf(pages,"%ld,%d,%d,%ld,%ld,going\n",
 	sysclock,process,page,processes[process]->pid, processes[process]->kind); 
     processes[process]->pages[page]=-1; return TRUE;
@@ -429,6 +432,8 @@ int pagein(int process, int page) {
     if (processes[process]->pages[page]>=-PAGEWAIT ) 
 	return FALSE; /* not yet out */ 
     sim_log(LOG_PAGE,"process=%2d page=%3d start pagein\n",process,page);
+            fflush(stdout);
+
     if (pages) fprintf(pages,"%ld,%d,%d,%ld,%ld,coming\n",
 	sysclock,process,page,processes[process]->pid, processes[process]->kind); 
     processes[process]->pages[page]=PAGEWAIT; pagesavail--; return TRUE; 
@@ -696,7 +701,8 @@ static void allage () {
 		    processes[i]->pages[j]--; 
 		    if (processes[i]->pages[j]==0) { 
 			sim_log(LOG_PAGE,"process=%2d page=%3d end   pagein\n",i,j);
-			if (pages) fprintf(pages,"%ld,%ld,%ld,%ld,%ld,in\n",
+			fflush(stdout);
+            if (pages) fprintf(pages,"%ld,%ld,%ld,%ld,%ld,in\n",
 			    sysclock,i,j,processes[i]->pid, processes[i]->kind); 
 		    } 
 		} else if (processes[i]->pages[j]<0 
@@ -704,7 +710,8 @@ static void allage () {
 		    processes[i]->pages[j]--; 
 		    if(processes[i]->pages[j]<-PAGEWAIT) { 
 			sim_log(LOG_PAGE,"process=%2d page=%3d end   pageout\n",i,j);
-			if (pages) fprintf(pages,"%ld,%ld,%ld,%ld,%ld,out\n",
+			fflush(stdout);
+            if (pages) fprintf(pages,"%ld,%ld,%ld,%ld,%ld,out\n",
 			    sysclock,i,j,processes[i]->pid, processes[i]->kind); 
 			pagesavail++; 
 		    } 
