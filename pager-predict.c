@@ -164,6 +164,21 @@ int num_pages_swapped_in_right_now(Pentry p)
     return num_pages;
 }
 
+int page_is_swapping_in_right_now(Pentry p, int proc, int page) {
+    for (int i = 0; i < p.npages; i++)
+    {
+        // If a page is not current paged in, we can call pageout
+        // idempotently to no effect, EXCEPT this will return 0 when
+        // the page is currently swapping in -- therefore, we can
+        // tally how many are swapping in right now
+        if (i == page && !p.pages[i] && !pageout(proc, i))
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int num_pages_swapping_in_right_now(Pentry p, int proc)
 {
     int num_pages = 0;
@@ -182,7 +197,7 @@ int num_pages_swapping_in_right_now(Pentry p, int proc)
     return num_pages;
 }
 
-int find_LRU_victim(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc_type)
+int find_LRU_victim(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], int proc_type)
 {
     // Try to find the LRU page; this should
     // be the page with the lowest value in its
@@ -210,6 +225,8 @@ int find_LRU_victim(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc_t
             lru_timestamp = timestamps[pagetmp];
         }
     }
+    if(proc == 5)
+        printf("process= 5; victim: %d", page);
     return lru_page;
 }
 
@@ -221,7 +238,7 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
     /* Is page out of memory? Try to page something in; 
        If this fails, page something out */
     int pagein_required = !p.pages[page];
-    if (pagein_required)
+    if (pagein_required && !page_is_swapping_in_right_now(p, proc, page))
     {
 
         // Keep track of total pages used so we don't swap in too many
@@ -241,7 +258,7 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
 
                 if (pageout(proc, // NOTE: May fail if this page is already
                             // in the process of being swapped in
-                            find_LRU_victim(p, page, timestamps, proc_type)))
+                            find_LRU_victim(p, proc, page, timestamps, proc_type)))
                 {
 
                     // proc_log(proc, "o ");
@@ -256,14 +273,17 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
                 // proc_log(proc, "i ");
             }
         }
+
+        // Only proceed to free up space if this page is not already paging in
         else if (pages_used_now == PAGE_LIMIT_PER_PROCESS)
         {
             if(proc == 5)
                 printf("process= 5: pagelimit\n");
+            
 
             if (pageout(proc, // NOTE: May fail if this page is already
                         // in the process of being swapped in
-                        find_LRU_victim(p, page, timestamps, proc_type)))
+                        find_LRU_victim(p, proc, page, timestamps, proc_type)))
             {
 
                 // proc_log(proc, "o ");
