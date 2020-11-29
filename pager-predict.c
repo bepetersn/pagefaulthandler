@@ -209,7 +209,7 @@ int find_LRU_victim(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
         }
     }
     if(proc == 5)
-        printf("process= 5; victim: %d", page);
+        printf("process= 5; victim: %d\n", page);
     return lru_page;
 }
 
@@ -228,11 +228,11 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
         int pages_pagedin_now = num_pages_swapped_in_right_now(p);
         int pages_pagingin_now = num_pages_swapping_in_right_now(p, proc);
         int pages_used_now = pages_pagedin_now + pages_pagingin_now;
-        if(proc == 5) {
-            printf("process= 5; pages_pagingin_now: %d\n", pages_pagingin_now);
-            printf("process= 5; pages_paged_now: %d\n", pages_pagedin_now);
-            fflush(stdout);
-        }
+        // if(proc == 5) {
+        //     printf("process= 5; pages_pagingin_now: %d\n", pages_pagingin_now);
+        //     printf("process= 5; pages_paged_now: %d\n", pages_pagedin_now);
+        //     fflush(stdout);
+        // }
         if (pages_used_now < PAGE_LIMIT_PER_PROCESS)
         {
             if (!pagein(proc, page)) // NOTE: May fail if there are no physical frames available
@@ -260,8 +260,8 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
         // Only proceed to free up space if this page is not already paging in
         else if (pages_used_now == PAGE_LIMIT_PER_PROCESS)
         {
-            if(proc == 5)
-                printf("process= 5: pagelimit\n");
+            // if(proc == 5)
+            //     printf("process= 5: pagelimit\n");
             
 
             if (pageout(proc, // NOTE: May fail if this page is already
@@ -351,17 +351,17 @@ void pageit(Pentry q[MAXPROCESSES])
             proc_type = proc_types[proc];
             // }
 
-            if (proc == 5)
-                printf("process= 5; tick: %d; %d,", tick, page);
+            // if (proc == 5)
+            //     printf("process= 5; tick: %d; %d,", tick, page);
 
             handle_swap_in(p, proc, page, timestamps[proc], proc_type);
             // TODO: check for previous prediction miss
             next_page = predict_next_page(p, page, timestamps[proc], proc_type);
             
-            if (proc == 5) {
-                printf("%d\n", next_page);
-                fflush(stdout);
-            }
+            // if (proc == 5) {
+            //     printf("%d\n", next_page);
+            //     fflush(stdout);
+            // }
 
             handle_swap_in(p, proc, next_page, timestamps[proc], proc_type);
         }
