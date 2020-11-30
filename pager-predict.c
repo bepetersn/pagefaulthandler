@@ -254,7 +254,34 @@ int find_LRU_victim(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
     return lru_page;
 }
 
-void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], int proc_type)
+void handle_swap_out(Pentry p, int proc, int target, int timestamps[MAXPROCPAGES], int paging_out[MAXPROCPAGES], int *blocked, int proc_type)
+{
+    int victim;
+    if (proc == 5)
+    {
+        printf("process= 5: blocked: %d\n", *blocked);
+    }
+    if ((*blocked) < 2) // We've paged out as many pages as will help
+    {
+        victim = find_LRU_victim(p, proc, target, timestamps, paging_out, proc_type);
+        if (victim == 11)
+        {
+            printf("11!");
+        }
+        if (pageout(proc, victim)) // NOTE: May fail if this page is already
+                                   // in the process of being swapped in
+
+        {
+            paging_out[victim] = 100;
+        }
+        else
+        {
+            // victim is swapping in
+        }
+    }
+}
+
+void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], int paging_out[MAXPROCPAGES], int *blocked, int proc_type)
 {
     // if(proc == 5)
     //     printf("get page%d", page);
