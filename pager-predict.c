@@ -65,7 +65,7 @@ int classify(int jump)
     }
 }
 
-int detect_jump(int last_pc, int pc)
+int detect_jump(int last_pc, int pc, int *blocked)
 {
     /* Detect a jump made by the pc for this 
        process; this could be from going back to the beginning 
@@ -83,6 +83,7 @@ int detect_jump(int last_pc, int pc)
         {
             if ((pc - last_pc) == 1)
             {
+                *blocked = 0;
                 return 0; // instruction execution
             }
             else
@@ -171,7 +172,22 @@ int num_pages_swapped_in_right_now(Pentry p)
     return num_pages;
 }
 
-int page_is_swapping_in_right_now(Pentry p, int proc, int page) {
+int num_pages_swapping_out_right_now(Pentry p, int paging_out[MAXPROCPAGES])
+{
+    int num_pages = 0;
+    for (int i = 0; i < p.npages; i++)
+    {
+        if (paging_out[i])
+        {
+            // printf("%d", num_pages);
+            num_pages++;
+        }
+    }
+    return num_pages;
+}
+
+int page_is_swapping_in_right_now(Pentry p, int proc, int page)
+{
     for (int i = 0; i < p.npages; i++)
     {
         // If a page is not current paged in, we can call pageout
