@@ -25,7 +25,14 @@
 #define AVG_PROCESS_MAX_PAGE 11
 #define MAX_PAGE_USED 15
 
-#define proc_log(proc, msg) { if(proc == 5) { printf("process =5: %s", msg); fflush(stdout);}}
+#define proc_log(proc, msg)                \
+    {                                      \
+        if (proc == 5)                     \
+        {                                  \
+            printf("process =5: %s", msg); \
+            fflush(stdout);                \
+        }                                  \
+    }
 
 int classify(int jump)
 {
@@ -213,11 +220,12 @@ int find_LRU_victim(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
     int pagetmp = 0;
     for (pagetmp = 0; pagetmp < MAX_PAGE_USED; pagetmp++)
     {
+
         // Find the victim: mininum non-zero
         // timestamp that is in mem
-        if ( timestamps[pagetmp] &&
+        if (timestamps[pagetmp] &&
             (timestamps[pagetmp] <
-                     lru_timestamp) &&
+             lru_timestamp) &&
             pagetmp != page &&
             p.pages[pagetmp])
         {
@@ -225,8 +233,8 @@ int find_LRU_victim(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
             lru_timestamp = timestamps[pagetmp];
         }
     }
-    if(proc == 5)
-        printf("process= 5; victim: %d\n", page);
+    if (proc == 5)
+        printf("process= 5; victim: %d\n", lru_page);
     return lru_page;
 }
 
@@ -235,7 +243,8 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
     // if(proc == 5) 
     //     printf("get page%d", page);
 
-    /* Is page out of memory? Try to page something in; 
+    /* Is page out of memory and not being paged in? 
+       Try to page something in; 
        If this fails, page something out */
     int pagein_required = !p.pages[page];
     if (pagein_required && !page_is_swapping_in_right_now(p, proc, page))
@@ -305,7 +314,7 @@ void pageit(Pentry q[MAXPROCESSES])
 {
     /* Static vars */
     static int initialized = 0;
-    static int tick = 0;
+    static int tick = 1;
     static int timestamps[MAXPROCESSES][MAXPROCPAGES];
     static int pcs[MAXPROCESSES][2];
     static int proc_types[MAXPROCESSES];
@@ -354,19 +363,18 @@ void pageit(Pentry q[MAXPROCESSES])
             // Record the last and current PCs
             pcs[proc][LAST] = pcs[proc][CURRENT];
             pcs[proc][CURRENT] = pc;
+            printf("proc %d: %d, %d\n", proc, pc, pcs[proc][LAST]);
 
             // Detect any jumps and classify
-            // if (proc_types[proc] == -1) // When we do this only once, we mess up on second round
-            // {
+            if(proc == 0) {
+                printf("wtf");
+            }
             jump = detect_jump(pcs[proc][LAST], pc);
             if (jump)
             {
                 proc_types[proc] = classify(jump);
-                // printf("%d, %d\n", proc, proc_types[proc]);
-                // fflush(stdout);
             }
             proc_type = proc_types[proc];
-            // }
 
             // if (proc == 5)
             //     printf("process= 5; tick: %d; %d,", tick, page);
@@ -386,5 +394,4 @@ void pageit(Pentry q[MAXPROCESSES])
     /* Advance time for next pageit iteration */
     tick++;
     // getchar();
-    /* Record the last pc */
 }
