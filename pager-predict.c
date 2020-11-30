@@ -333,6 +333,8 @@ void pageit(Pentry q[MAXPROCESSES])
     static int timestamps[MAXPROCESSES][MAXPROCPAGES];
     static int pcs[MAXPROCESSES][2];
     static int proc_types[MAXPROCESSES];
+    static int paging_out[MAXPROCESSES][MAXPROCPAGES];
+    static int blocked[MAXPROCESSES];
 
     /* Local vars */
     int proctmp;
@@ -353,9 +355,11 @@ void pageit(Pentry q[MAXPROCESSES])
             for (pagetmp = 0; pagetmp < MAXPROCPAGES; pagetmp++)
             {
                 timestamps[proctmp][pagetmp] = 0;
+                paging_out[proctmp][pagetmp] = 0;
             }
             pcs[proctmp][CURRENT] = -1;
             proc_types[proctmp] = -1;
+            blocked[proctmp] = 0;
         }
         initialized = 1;
     }
