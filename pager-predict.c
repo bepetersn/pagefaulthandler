@@ -387,7 +387,7 @@ void pageit(Pentry q[MAXPROCESSES])
             if(proc == 0) {
                 printf("wtf");
             }
-            jump = detect_jump(pcs[proc][LAST], pc);
+            jump = detect_jump(pcs[proc][LAST], pc, &blocked[proc]);
             if (jump)
             {
                 proc_types[proc] = classify(jump);
@@ -397,16 +397,10 @@ void pageit(Pentry q[MAXPROCESSES])
             // if (proc == 5)
             //     printf("process= 5; tick: %d; %d,", tick, page);
 
-            handle_swap_in(p, proc, page, timestamps[proc], proc_type);
+            handle_swap_in(p, proc, page, timestamps[proc], paging_out[proc], &blocked[proc], proc_type);
             // TODO: check for previous prediction miss
             next_page = predict_next_page(p, page, timestamps[proc], proc_type);
-            
-            // if (proc == 5) {
-            //     printf("%d\n", next_page);
-            //     fflush(stdout);
-            // }
-
-            handle_swap_in(p, proc, next_page, timestamps[proc], proc_type);
+            handle_swap_in(p, proc, next_page, timestamps[proc], paging_out[proc], &blocked[proc], proc_type);
         }
     }
     /* Advance time for next pageit iteration */
