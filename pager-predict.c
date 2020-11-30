@@ -107,7 +107,7 @@ int predict_next_page(Pentry p, int page, int timestamps[MAXPROCPAGES], int proc
             { // P0 makes this jump, probability: 0.6
                 return 10;
             }
-            if (page == 12)
+            if (page == 11)
             { // P0 makes this jump, sometimes; should be rarer than it is?
                 return 0;
             }
@@ -240,7 +240,7 @@ int find_LRU_victim(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
 
 void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], int proc_type)
 {
-    // if(proc == 5) 
+    // if(proc == 5)
     //     printf("get page%d", page);
 
     /* Is page out of memory and not being paged in? 
@@ -256,13 +256,11 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
         int pages_used_now = pages_pagedin_now + pages_pagingin_now;
         // if(proc == 5) {
         //     printf("process= 5; pages_pagingin_now: %d\n", pages_pagingin_now);
-        //     printf("process= 5; pages_paged_now: %d\n", pages_pagedin_now);
         //     fflush(stdout);
         // }
         if (pages_used_now < PAGE_LIMIT_PER_PROCESS)
         {
-            if (!pagein(proc, page)) // NOTE: May fail if there are no physical frames available
-                                     //       OR if this page is in the process of being swapped out
+            if (!pagein(proc, page))
             {
 
                 if (pageout(proc, // NOTE: May fail if this page is already
@@ -279,11 +277,12 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
             }
             else
             {
-                // proc_log(proc, "i ");
+                // There are no physical frames available
+                // OR this page is in the process of being swapped out
             }
         }
 
-        // Only proceed to free up space if this page is not already paging in
+        // Only proceed to free up space if we have not already over-allocated
         else if (pages_used_now == PAGE_LIMIT_PER_PROCESS)
         {
             // if(proc == 5)
