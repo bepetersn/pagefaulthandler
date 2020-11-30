@@ -282,31 +282,26 @@ void handle_swap_out(Pentry p, int proc, int target, int timestamps[MAXPROCPAGES
     }
 }
 
-void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], int paging_out[MAXPROCPAGES], int *blocked, int proc_type)
+void handle_swap_in(Pentry p, int proc, int target, int timestamps[MAXPROCPAGES], 
+                    int paging_out[MAXPROCPAGES], int *blocked, int proc_type)
 {
-    // if(proc == 5)
-    //     printf("get page%d", page);
 
     /* Is page out of memory and not being paged in? 
        Try to page something in; 
        If this fails, page something out */
-    int pagein_required = !p.pages[page];
-    if (pagein_required && !page_is_swapping_in_right_now(p, proc, page))
+    int pagein_required = !p.pages[target];
+    if (pagein_required && !page_is_swapping_in_right_now(p, proc, target))
     {
 
         // Keep track of total pages used so we don't swap in too many
         int pages_pagedin_now = num_pages_swapped_in_right_now(p);
         int pages_pagingin_now = num_pages_swapping_in_right_now(p, proc);
         int pages_used_now = pages_pagedin_now + pages_pagingin_now;
-        // if(proc == 5) {
-        //     printf("process= 5; pages_pagingin_now: %d\n", pages_pagingin_now);
-        //     fflush(stdout);
-        // }
         if (pages_used_now < PAGE_LIMIT_PER_PROCESS)
         {
-            if (!pagein(proc, page))
+            if (!pagein(proc, target))
             {
-                handle_swap_out(p, proc, page, timestamps, paging_out, blocked, proc_type);
+                handle_swap_out(p, proc, target, timestamps, paging_out, blocked, proc_type);
             }
             else
             {
@@ -318,7 +313,6 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
         // Only proceed to free up space if we have not already over-allocated
         else if (pages_used_now == PAGE_LIMIT_PER_PROCESS)
         {
-            // if(proc == 5) printf("process= 5: pagelimit\n");
             handle_swap_out(p, proc, target, timestamps, paging_out, blocked, proc_type);
             (*blocked)++;
         }
