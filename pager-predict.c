@@ -408,6 +408,10 @@ void pageit(Pentry q[MAXPROCESSES])
             next_page = predict_next_page(p, page, timestamps[proc], proc_type);
             handle_swap_in(p, proc, next_page, timestamps[proc], paging_out[proc], &blocked[proc], proc_type);
         }
+        else
+        {
+            blocked[proc] = 0;
+        }
     }
     /* Advance time for next pageit iteration */
     tick++;
