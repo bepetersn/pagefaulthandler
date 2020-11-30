@@ -394,8 +394,14 @@ void pageit(Pentry q[MAXPROCESSES])
             }
             proc_type = proc_types[proc];
 
-            // if (proc == 5)
-            //     printf("process= 5; tick: %d; %d,", tick, page);
+            // Track any paging-out pages
+            for (int i = 0; i < p.npages; i++)
+            {
+                if (paging_out[proc][pagetmp])
+                {
+                    paging_out[proc][pagetmp] -= 1;
+                }
+            }
 
             handle_swap_in(p, proc, page, timestamps[proc], paging_out[proc], &blocked[proc], proc_type);
             // TODO: check for previous prediction miss
