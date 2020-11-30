@@ -220,7 +220,7 @@ int num_pages_swapping_in_right_now(Pentry p, int proc)
     return num_pages;
 }
 
-int find_LRU_victim(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], int proc_type)
+int find_LRU_victim(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], int paging_out[MAXPROCPAGES], int proc_type)
 {
     // Try to find the LRU page; this should
     // be the page with the lowest value in its
@@ -243,7 +243,8 @@ int find_LRU_victim(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
             (timestamps[pagetmp] <
              lru_timestamp) &&
             pagetmp != page &&
-            p.pages[pagetmp])
+            p.pages[pagetmp] &&
+            !paging_out[pagetmp])
         {
             lru_page = pagetmp;
             lru_timestamp = timestamps[pagetmp];
@@ -305,18 +306,7 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
         {
             if (!pagein(proc, page))
             {
-
-                if (pageout(proc, // NOTE: May fail if this page is already
-                            // in the process of being swapped in
-                            find_LRU_victim(p, proc, page, timestamps, proc_type)))
-                {
-
-                    // proc_log(proc, "o ");
-                }
-                else
-                {
-                    // proc_log(proc, "*i ");
-                }
+                handle_swap_out(p, proc, page, timestamps, paging_out, blocked, proc_type);
             }
             else
             {
@@ -328,21 +318,9 @@ void handle_swap_in(Pentry p, int proc, int page, int timestamps[MAXPROCPAGES], 
         // Only proceed to free up space if we have not already over-allocated
         else if (pages_used_now == PAGE_LIMIT_PER_PROCESS)
         {
-            // if(proc == 5)
-            //     printf("process= 5: pagelimit\n");
-            
-
-            if (pageout(proc, // NOTE: May fail if this page is already
-                        // in the process of being swapped in
-                        find_LRU_victim(p, proc, page, timestamps, proc_type)))
-            {
-
-                // proc_log(proc, "o ");
-            }
-            else
-            {
-                // proc_log(proc, "*i ");
-            }
+            // if(proc == 5) printf("process= 5: pagelimit\n");
+            handle_swap_out(p, proc, target, timestamps, paging_out, blocked, proc_type);
+            (*blocked)++;
         }
         else
         {
